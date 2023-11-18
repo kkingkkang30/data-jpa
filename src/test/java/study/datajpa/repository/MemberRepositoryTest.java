@@ -3,6 +3,10 @@ package study.datajpa.repository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Slice;
+import org.springframework.data.domain.Sort;
 import org.springframework.test.annotation.Rollback;
 import org.springframework.transaction.annotation.Transactional;
 import study.datajpa.dto.MemberDto;
@@ -154,5 +158,39 @@ class MemberRepositoryTest {
         Member findMember2 = memberRepository.findMemberByUsername("bbb");
         Optional<Member> findOptionalMember2 = memberRepository.findOptionalByUsername("bbb");
 
+    }
+
+    @Test
+    public void paging(){
+        memberRepository.save(new Member("member1",10));
+        memberRepository.save(new Member("member2",10));
+        memberRepository.save(new Member("member3",10));
+        memberRepository.save(new Member("member4",10));
+        memberRepository.save(new Member("member5",10));
+
+        PageRequest pageRequest= PageRequest.of(0, 3, Sort.by(Sort.Direction.DESC, "username"));
+
+        int age = 10;
+
+        // when
+        Page<Member> members = memberRepository.findByAge(age,pageRequest);
+
+        // page <member> 그대로 front에 보내면 절대 안됨 (엔티티 노출)
+        Page<MemberDto> toMap = members.map(member -> new MemberDto(member.getId(), member.getUsername(), null));
+
+
+        assertThat(members.getContent().size()).isEqualTo(3);
+        assertThat(members.getTotalElements()).isEqualTo(5);
+        assertThat(members.getNumber()).isEqualTo(0);  // page number
+        assertThat(members.getTotalPages()).isEqualTo(2); // total page number
+        assertThat(members.isFirst()).isTrue();
+        assertThat(members.hasNext()).isTrue();
+
+        Slice<Member> memberSlice = memberRepository.findSliceByAge(age,pageRequest);
+
+        assertThat(memberSlice.getContent().size()).isEqualTo(3);
+        assertThat(memberSlice.getNumber()).isEqualTo(0);  // page number
+        assertThat(memberSlice.isFirst()).isTrue();
+        assertThat(memberSlice.hasNext()).isTrue();
     }
 }
