@@ -11,9 +11,9 @@ import study.datajpa.entity.Team;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 
-import static org.assertj.core.api.Assertions.as;
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.*;
 
 @SpringBootTest
 @Transactional
@@ -129,5 +129,30 @@ class MemberRepositoryTest {
 
         List<Member> result = memberRepository.findByNames(Arrays.asList("aaa","bbb"));
         assertThat(result.size()).isEqualTo(2);
+    }
+
+    @Test
+    public void testReturnType(){
+        Member m1 = new Member("aaa",10);
+        Member m2 = new Member("bbb",20);
+        Member m3 = new Member("bbb",20);
+
+        memberRepository.save(m1);
+        memberRepository.save(m2);
+        memberRepository.save(m3);
+
+        List<Member> findMembers = memberRepository.findListByUsername("aaab");
+        Member findMember = memberRepository.findMemberByUsername("aaac");
+        Optional<Member> findOptionalMember = memberRepository.findOptionalByUsername("aaad");
+
+        // if member not exist
+        assertThat(findMembers.size()).isEqualTo(0);
+        assertThat(findMember).isNull();
+
+        // if member is more than 2
+        // findMember / findOptionalMember exception
+        Member findMember2 = memberRepository.findMemberByUsername("bbb");
+        Optional<Member> findOptionalMember2 = memberRepository.findOptionalByUsername("bbb");
+
     }
 }
