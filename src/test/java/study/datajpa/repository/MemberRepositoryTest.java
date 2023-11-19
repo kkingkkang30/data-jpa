@@ -1,5 +1,7 @@
 package study.datajpa.repository;
 
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -26,6 +28,9 @@ class MemberRepositoryTest {
 
     @Autowired MemberRepository memberRepository;
     @Autowired TeamRepository teamRepository;
+    @PersistenceContext
+    EntityManager em;
+
     @Test
     public void testMember(){
 
@@ -193,4 +198,104 @@ class MemberRepositoryTest {
         assertThat(memberSlice.isFirst()).isTrue();
         assertThat(memberSlice.hasNext()).isTrue();
     }
+
+    @Test
+    public void bulkUpdate(){
+        memberRepository.save(new Member("member1",10));
+        memberRepository.save(new Member("member2",13));
+        memberRepository.save(new Member("member3",20));
+        memberRepository.save(new Member("member4",26));
+        memberRepository.save(new Member("member5",40));
+
+        //when
+        int resultCount = memberRepository.bulkAgePlus(20);
+
+        // bulk 연산에서 조심해야함..  bulk 연산은 영속성 컨텍스트 없이 바로 db 업데이트 때려버려서 영속성 컨텍스트가 모름
+        // 그래서 영속성 컨텍스트를 날려버려야 40->50이 반영됨을 알 수 있음
+        Member resultFlushBefore = memberRepository.findMemberByUsername("member5");
+        assertThat(resultFlushBefore.getAge()).isEqualTo(40);
+
+        em.flush(); // db 에 반영
+        em.clear();
+        // clear 안하려면   @Modifying(clearAutomatically = true) 설정해주면 됨
+
+        Member result = memberRepository.findMemberByUsername("member5");
+
+        //then
+        assertThat(resultCount).isEqualTo(3);
+        assertThat(result.getAge()).isEqualTo(50);
+    }
+
+    @Test
+    public void findMemberLazy(){
+        //given
+        // member1 -> teamA
+        // member2 -> teamB
+
+        Team teamA = new Team("teamA");
+        Team teamB = new Team("teamB");
+        teamRepository.save(teamA);
+        teamRepository.save(teamB);
+
+        Member member1 = new Member("member1", 10, teamA);
+        Member member2 = new Member("member2", 10, teamB);
+        memberRepository.save(member1);
+        memberRepository.save(member2);
+
+        em.flush();
+        em.clear();
+
+        //when
+        List<Member> members = memberRepository.findAll();
+
+        List<Member> fetchMembers = memberRepository.findMemberFetchJoin();
+
+        for(Member member : members){
+            System.out.println("member = " + member.getUsername());
+            // proxy 가짜 객체 (lazy fetch)
+            System.out.println("member.teamClass = " + member.getTeam().getClass());
+            System.out.println("member.team = " + member.getTeam().getName());
+        }
+
+        // fetch 한번에 다 끌고옴
+        for(Member member : fetchMembers){
+            System.out.println("member = " + member.getUsername());
+            // 진짜 객체
+            System.out.println("member.teamClass = " + member.getTeam().getClass());
+            System.out.println("member.team = " + member.getTeam().getName());
+        }
+    }
+
+    @Test
+    public void findEntityFetch() {
+        //given
+        // member1 -> teamA
+        // member2 -> teamB
+
+        Team teamA = new Team("teamA");
+        Team teamB = new Team("teamB");
+        teamRepository.save(teamA);
+        teamRepository.save(teamB);
+
+        Member member1 = new Member("member1", 10, teamA);
+        Member member2 = new Member("member2", 10, teamB);
+        memberRepository.save(member1);
+        memberRepository.save(member2);
+
+        em.flush();
+        em.clear();
+
+        //when
+        List<Member> members = memberRepository.findAll();
+
+
+        for (Member member : members) {
+            System.out.println("member = " + member.getUsername());
+            // proxy 가짜 객체 (lazy fetch)
+            System.out.println("member.teamClass = " + member.getTeam().getClass());
+            System.out.println("member.team = " + member.getTeam().getName());
+        }
+
+    }
+
 }

@@ -1,9 +1,12 @@
 package study.datajpa.repository;
 
+import jakarta.persistence.Entity;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import study.datajpa.dto.MemberDto;
@@ -45,4 +48,25 @@ public interface MemberRepository extends JpaRepository<Member,Long> {
 
     Slice<Member> findSliceByAge(int age, Pageable pageable);
 
+    // modifying 어노테이션 있어야 jparepo 의 executeUpdate 실행함 .
+    @Modifying //(clearAutomatically = true)
+    @Query("update Member m set m.age = m.age +10 where m.age >= :age")
+    int bulkAgePlus(@Param("age") int age);
+
+    @Query("select m from Member  m left join fetch m.team")
+    List<Member> findMemberFetchJoin();
+
+    // --- 전부 다 fetch 조인 되게 함 --- //
+    @Override
+    @EntityGraph(attributePaths = {"team"})
+    List<Member> findAll();
+
+    @Query("select m from Member m")
+    @EntityGraph(attributePaths = {"team"})
+    List<Member> findMemberEntityGraph();
+
+    @EntityGraph(attributePaths = {"team"})
+    List<Member> findEntityGraphByUsername(@Param("username") String username);
+
+    // -------- //
 }
