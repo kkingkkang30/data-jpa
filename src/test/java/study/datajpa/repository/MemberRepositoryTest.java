@@ -298,4 +298,25 @@ class MemberRepositoryTest {
 
     }
 
+    @Test
+    public void queryHint(){
+        // given
+        Member saved = memberRepository.save(new Member("member1", 10));
+
+        em.flush();
+        em.clear();
+
+        // when
+
+        // 조회용으로만 쓸 용도일 때 hint 주기
+        Member findMember = memberRepository.findReadOnlyByUsername("member1");
+        // member2 로 update를 안침
+        findMember.setUsername("member2");
+
+        em.flush();
+
+        // select for update 문이 실행됨.
+        List<Member> findMem = memberRepository.findLockByUsername("member1");
+
+    }
 }
